@@ -36,7 +36,7 @@ func parseJsonArray(obj *simplejson.Json) (*simplejson.Json, int, error) {
 }
 
 // get groups in marathon
-func GetGroups(user string) map[string]domain.MarathonGroup {
+func GetGroups(user string) []domain.MarathonGroup {
 
     apiResult := commonHandler(commons.HTTP_GET, "groups")
     if apiResult.Status == 200 {
@@ -77,6 +77,9 @@ func GetGroups(user string) map[string]domain.MarathonGroup {
                     subGroupData := subGroupList.GetIndex(j)
 
                     subGroupId, _ := subGroupData.Get("id").String()
+
+                    subGroupId = strings.Replace(subGroupId, groupId + "/", "", -1)
+
                     subGroupVersion, _ := subGroupData.Get("version").String()
                     marathonSubGroup.Id = subGroupId
                     marathonSubGroup.Version = subGroupVersion
@@ -179,7 +182,12 @@ func GetGroups(user string) map[string]domain.MarathonGroup {
                 }
             }
 
-            return result
+            resultList := []domain.MarathonGroup{}
+            for _, val := range result {
+                resultList = append(resultList, val)
+            }
+
+            return resultList
         }
     }
 
