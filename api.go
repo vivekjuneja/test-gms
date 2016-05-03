@@ -48,5 +48,5 @@ func main() {
         c.JSON(200, resultData)
     })
 
-    router.Run(":4000") // listen and server on 0.0.0.0:5000
+    router.Run(":4000") // listen and server on 0.0.0.0:4000
 }

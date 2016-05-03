@@ -138,13 +138,15 @@ func GetGroups(user string) []domain.MarathonGroup {
                         appHaProxyGroup, _ := appLabelsObj.Get("HAPROXY_GROUP").String()
                         appServiceInfo := make([]map[string]string, 0)
 
-                        if (strings.Index(appHaProxyGroup, "internal") != -1) {
-                            fmt.Println("internal proxy : " + appHaProxyGroup)
+                        tempHaproxyArray := strings.Split(appHaProxyGroup, ",")
+                        for _, val := range tempHaproxyArray {
+                            trimVal := strings.TrimSpace(val)
+
                             portMappings, portMappingLen, _ := parseJsonArray(appContainerDockerObj.Get("portMappings"))
                             for pi := 0; pi < portMappingLen; pi++ {
                                 portMappingData := portMappings.GetIndex(pi)
                                 tempServicePort, _ := portMappingData.Get("servicePort").Int()
-                                containerIpAddr := consul.GetContainerIpAddr("internal")
+                                containerIpAddr := consul.GetContainerIpAddr(trimVal)
 
                                 fmt.Printf("tempService Port : %d", tempServicePort)
                                 fmt.Println("containerIpAddr : " + containerIpAddr)
@@ -153,6 +155,13 @@ func GetGroups(user string) []domain.MarathonGroup {
                                 tempPortMap := make(map[string]string)
                                 tempPortMap["service_port"] =  strconv.Itoa(tempServicePort)
                                 tempPortMap["service_url"] =  "http://" + containerIpAddr + ":" + strconv.Itoa(tempServicePort)
+                                var tempServiceType string = ""
+                                if trimVal == "internal" {
+                                    tempServiceType = "public"
+                                } else if trimVal == "external" {
+                                    tempServiceType = "private"
+                                }
+                                tempPortMap["service_type"] =  tempServiceType
 
                                 appServiceInfo = append(appServiceInfo, tempPortMap)
                             }
