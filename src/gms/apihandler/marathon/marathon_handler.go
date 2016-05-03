@@ -4,9 +4,11 @@ import (
     "fmt"
     "net/http"
     "net/url"
+    "strconv"
     "strings"
     "gms/apihandler/commons"
     "gms/apihandler/marathon/domain"
+    "gms/apihandler/consul"
 
     "github.com/bitly/go-simplejson"
     "github.com/parnurzeal/gorequest"
@@ -94,31 +96,25 @@ func GetGroups(user string) []domain.MarathonGroup {
                         appUser, _ := appLabelsObj.Get("USER").String()
 
                         if len(user) > 0 && appUser != user {
-                            fmt.Println("is contine!!!!!!!")
+                            fmt.Println("is continue!!!!!!!")
                             continue
                         }
 
                         appId, _ := appData.Get("id").String()
+                        appId = strings.Replace(appId, groupId + "/" + subGroupId + "/", "", -1)
+
                         appCmd, _ := appData.Get("cmd").String()
                         appInstances, _ := appData.Get("instances").Int()
                         appCpus, _ := appData.Get("cpus").Float64()
                         appMem, _ := appData.Get("mem").Int()
                         appDisk, _ := appData.Get("disk").Int()
-                        appVersion, _ := appData.Get("version").String()
+                        appTimestamp, _ := appData.Get("version").String()
 
                         appContainerObj := appData.Get("container")
-                        appContainerType, _ := appContainerObj.Get("type").String()
-
                         appContainerDockerObj := appContainerObj.Get("docker")
                         appContainerImage, _ := appContainerDockerObj.Get("image").String()
-                        appContainerNetwork, _ := appContainerDockerObj.Get("network").String()
-
-                        appServicePorts := make([]int, 0)
-                        appContainerPorts := make([]int, 0)
-
+                        /*
                         if strings.ToLower(appContainerNetwork) == "bridge" {
-                            portMappings, portMappingLen, _ := parseJsonArray(appContainerDockerObj.Get("portMappings"))
-
                             for pi := 0; pi < portMappingLen; pi++ {
                                 portMappingData := portMappings.GetIndex(pi)
 
@@ -136,9 +132,32 @@ func GetGroups(user string) []domain.MarathonGroup {
                                 appContainerPorts = append(appContainerPorts, tempContainerPort)
                             }
                         }
+                        */
 
                         appBuildId, _ := appLabelsObj.Get("BUILDID").String()
-                        appTriggeredBy, _ := appLabelsObj.Get("TRIGGERED_BY").String()
+                        appHaProxyGroup, _ := appLabelsObj.Get("HAPROXY_GROUP").String()
+                        appServiceInfo := make([]map[string]string, 0)
+
+                        if (strings.Index(appHaProxyGroup, "internal") != -1) {
+                            fmt.Println("internal proxy : " + appHaProxyGroup)
+                            portMappings, portMappingLen, _ := parseJsonArray(appContainerDockerObj.Get("portMappings"))
+                            for pi := 0; pi < portMappingLen; pi++ {
+                                portMappingData := portMappings.GetIndex(pi)
+                                tempServicePort, _ := portMappingData.Get("servicePort").Int()
+                                containerIpAddr := consul.GetContainerIpAddr("internal")
+
+                                fmt.Printf("tempService Port : %d", tempServicePort)
+                                fmt.Println("containerIpAddr : " + containerIpAddr)
+
+
+                                tempPortMap := make(map[string]string)
+                                tempPortMap["service_port"] =  strconv.Itoa(tempServicePort)
+                                tempPortMap["service_url"] =  "http://" + containerIpAddr + ":" + strconv.Itoa(tempServicePort)
+
+                                appServiceInfo = append(appServiceInfo, tempPortMap)
+                            }
+                        }
+
                         appCommit, _ := appLabelsObj.Get("COMMIT").String()
                         appJobName, _ := appLabelsObj.Get("JOB_NAME").String()
                         appProject, _ := appLabelsObj.Get("PROJECT").String()
@@ -152,20 +171,17 @@ func GetGroups(user string) []domain.MarathonGroup {
                         marathonApp.Cpus = appCpus
                         marathonApp.Mem = appMem
                         marathonApp.Disk = appDisk
-                        marathonApp.ServicePorts = appServicePorts
-                        marathonApp.ContainerPorts = appContainerPorts
-                        marathonApp.ContainerType = appContainerType
-                        marathonApp.ContainerNetwork = appContainerNetwork
+                        marathonApp.ServiceInfo = appServiceInfo
                         marathonApp.ContainerImage = appContainerImage
                         marathonApp.BuildId = appBuildId
-                        marathonApp.TriggeredBy = appTriggeredBy
+                        marathonApp.HaProxyGroup = appHaProxyGroup
                         marathonApp.Commit = appCommit
                         marathonApp.JobName = appJobName
                         marathonApp.Project = appProject
                         marathonApp.User = appUser
                         marathonApp.Env = appEnv
                         marathonApp.DeployId = appDeployId
-                        marathonApp.Version = appVersion
+                        marathonApp.Timestamp = appTimestamp
 
                         marathonApps = append(marathonApps, *marathonApp)
                     } // end of apps loop

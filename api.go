@@ -2,13 +2,15 @@ package main
 
 import (
     "fmt"
+    "encoding/json"
     "net/http"
 
     "github.com/gin-gonic/gin"
 
     "gms/apihandler/marathon"
-    "gms/apihandler/mesos"
 )
+
+const V1  = "/v1/"
 
 func main() {
     router := gin.Default()
@@ -21,25 +23,28 @@ func main() {
         c.String(http.StatusOK, "Hello Gravity Management System Settings")
     })
 
-    router.GET("/marathon/groups", func(c *gin.Context) {
+    router.GET(V1 + "apps", func(c *gin.Context) {
 
         user := c.Query("user")
+
         fmt.Println("user parameter : " + user)
         groupData := marathon.GetGroups(user)
 
         fmt.Printf("is result %v", groupData)
 
-        c.JSON(200, groupData)
+        // if using jsonp callback.
+        callback := c.Query("callback")
+        if len(callback) > 0 {
+            groupDataJson, _ := json.Marshal(groupData)
+            c.String(200, callback + "(" + string(groupDataJson) + ");")
+        } else {
+            c.JSON(200, groupData)
+        }
     })
 
-    router.DELETE("/marathon/groups/:groupsId", func(c *gin.Context) {
+    router.DELETE("/apps/:groupsId", func(c *gin.Context) {
         groupsId := c.Param("groupsId")
         resultData := marathon.DestroyGroups("/" + groupsId)
-        c.JSON(200, resultData)
-    })
-
-    router.GET("/mesos/master_state", func(c *gin.Context) {
-        resultData := mesos.GetMasterState()
         c.JSON(200, resultData)
     })
 
