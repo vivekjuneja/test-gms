@@ -157,11 +157,11 @@ func GetGroups(user string) []domain.MarathonGroup {
                                 tempPortMap["service_url"] =  "http://" + containerIpAddr + ":" + strconv.Itoa(tempServicePort)
                                 var tempServiceType string = ""
                                 if trimVal == "internal" {
-                                    tempServiceType = "public"
-                                } else if trimVal == "external" {
                                     tempServiceType = "private"
+                                } else if trimVal == "external" {
+                                    tempServiceType = "public"
                                 }
-                                tempPortMap["service_type"] =  tempServiceType
+                                tempPortMap["service_visibility"] =  tempServiceType
 
                                 appServiceInfo = append(appServiceInfo, tempPortMap)
                             }
